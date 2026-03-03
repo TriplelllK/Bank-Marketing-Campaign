@@ -7,9 +7,13 @@ import os
 import numpy as np
 
 def train_and_save_model():
-    file_path = '/mnt/c/Users/Kuat/Documents/AI engineering course/.venv/HW2/data/bank_full.csv'
+    # Используем относительный путь к датасету в корне проекта
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    file_path = os.path.join(project_root, 'data', 'bank_full.csv')
+
     if not os.path.exists(file_path):
         print(f"Ошибка: файл '{file_path}' не найден.")
+        print("Проверьте, что датасет находится в папке data и называется bank_full.csv")
         return
 
     try:
@@ -57,8 +61,9 @@ def train_and_save_model():
     features_info = {}
     fallback_values = {}
 
+    # определяем типы признаков, учитывая новый строковый dtype pandas
     for column in X.columns:
-        if X[column].dtype == 'object':
+        if X[column].dtype == 'object' or pd.api.types.is_string_dtype(X[column]):
             le = LabelEncoder()
             temp_col_for_mode = X[column].fillna(X[column].mode()[0])
             mode_value = temp_col_for_mode.mode()[0]
@@ -74,13 +79,19 @@ def train_and_save_model():
             fallback_values[column] = mode_value
 
         else:
+            # попытаемся привести колонку к числовому типу, если это возможно
+            try:
+                X[column] = pd.to_numeric(X[column], errors='coerce')
+            except Exception:
+                pass
             features_info[column] = {'type': 'numerical', 'min': X[column].min(), 'max': X[column].max()}
             fallback_values[column] = X[column].median()
 
+    # применяем ранее подготовленные энкодеры и заполняем пропуски
     for column in X.columns:
-        if X[column].dtype == 'object':
+        if X[column].dtype == 'object' or pd.api.types.is_string_dtype(X[column]):
             X[column] = X[column].fillna(fallback_values[column])
-            X[column] = encoders[column].transform(X[column])
+            X[column] = encoders[column].transform(X[column].astype(str))
         else:
             X[column] = X[column].fillna(fallback_values[column])
 
