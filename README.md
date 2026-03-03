@@ -185,9 +185,10 @@ curl -X POST "http://localhost:8000/predict" \
 
 <div align="center">
   <img src="images/ROC_Curves.png" alt="ROC Curves" width="500">
+</div>
+<div align="center">
   <img src="images/metric_table.png" alt="Metric table" width="500">
 </div>
-
 ### Важность признаков
 
 ![Feature Importance](images/feature_importance.png)
