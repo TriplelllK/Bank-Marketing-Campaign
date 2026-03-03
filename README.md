@@ -141,7 +141,11 @@ curl -X POST "http://localhost:8000/predict" \
   "message": "Кампания вероятнее всего будет успешна"
 }
 ```
-
+### Пример интерфейса
+<div align="center">
+  <img src="images/Fast_API_main.png" alt="FastAPI Main" width="500">
+  <img src="images/FastAPI_result_sample.png" alt="FastAPI Result Sample" width="500">
+</div>
 ## 📝 Обучение модели
 
 Полный процесс данных, обучения и оценки модели описан в файле [HW1.ipynb](HW1.ipynb).
@@ -174,6 +178,19 @@ curl -X POST "http://localhost:8000/predict" \
   ...
 }
 ```
+
+## 📊 Результаты модели
+
+### Метрики производительности
+
+<div align="center">
+  <img src="images/ROC_Curves.png" alt="ROC Curves" width="500">
+  <img src="images/metric_table.png" alt="Metric table" width="500">
+</div>
+
+### Важность признаков
+
+![Feature Importance](images/feature_importance.png)
 
 ## 📄 Лицензия
 
