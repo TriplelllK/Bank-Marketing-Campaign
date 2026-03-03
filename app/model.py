@@ -117,8 +117,20 @@ def train_and_save_model():
     # Сохранение параметров XGBoost в TXT-файл
     try:
         xgboost_params = model.get_params()
+        # очищаем параметры, убирая неустановленные (None)
         params_string = ""
-        for key, value in xgboost_params.items():
+        filtered_params = {k: v for k, v in xgboost_params.items() if v is not None}
+
+        # также добавим базовые параметры, используемые самим XGBoost
+        try:
+            booster_params = model.get_xgb_params()
+        except Exception:
+            booster_params = {}
+
+        # обединяем словари, booster_params могут переопределить filtered_params
+        merged = {**booster_params, **filtered_params}
+
+        for key, value in merged.items():
             # Преобразуем типы numpy в стандартные типы Python
             if isinstance(value, (np.integer, np.floating)):
                 params_string += f"{key}: {value.item()}\n"
