@@ -142,7 +142,8 @@ curl -X POST "http://localhost:8000/predict" \
 }
 ```
 ### Пример интерфейса
-![FastAPI_Main](images/Fast_API_main.png)
+![FastAPI_Main](images/FastAPI_main.png)
+
 ![FastAPI_result_sample](images/FastAPI_result_sample.png)
 
 ## 📝 Обучение модели
@@ -183,7 +184,9 @@ curl -X POST "http://localhost:8000/predict" \
 ### Метрики производительности
 
 ![ROC_Curves](images/ROC_Curves.png) 
+
 ![metric_table](images/metric_table.png)
+
 ### Важность признаков
 
 ![Feature Importance](images/feature_importance.png)
