@@ -141,10 +141,14 @@ curl -X POST "http://localhost:8000/predict" \
   "message": "Кампания вероятнее всего будет успешна"
 }
 ```
+### Пример интерфейса
+![FastAPI_Main](images/FastAPI_main.png)
+
+![FastAPI_result_sample](images/FastAPI_result_sample.png)
 
 ## 📝 Обучение модели
 
-Полный процесс данных, обучения и оценки модели описан в файле [HW1.ipynb](HW1.ipynb).
+Полный процесс данных, обучения и оценки модели описан в файле [bank_marketing](bank_marketing).
 
 В ноутбуке содержится:
 - Исследовательский анализ данных (EDA)
@@ -174,6 +178,18 @@ curl -X POST "http://localhost:8000/predict" \
   ...
 }
 ```
+
+## 📊 Результаты модели
+
+### Метрики производительности
+
+![ROC_Curves](images/ROC_Curves.png) 
+
+![metric_table](images/metric_table.png)
+
+### Важность признаков
+
+![Feature Importance](images/feature_importance.png)
 
 ## 📄 Лицензия
 
