@@ -142,10 +142,9 @@ curl -X POST "http://localhost:8000/predict" \
 }
 ```
 ### Пример интерфейса
-<div align="center">
-  <img src="images/Fast_API_main.png" alt="FastAPI Main" width="500">
-  <img src="images/FastAPI_result_sample.png" alt="FastAPI Result Sample" width="500">
-</div>
+![FastAPI_Main](images/Fast_API_main.png)
+![FastAPI_result_sample](images/FastAPI_result_sample.png)
+
 ## 📝 Обучение модели
 
 Полный процесс данных, обучения и оценки модели описан в файле [HW1.ipynb](HW1.ipynb).
@@ -183,12 +182,8 @@ curl -X POST "http://localhost:8000/predict" \
 
 ### Метрики производительности
 
-<div align="center">
-  <img src="images/ROC_Curves.png" alt="ROC Curves" width="500">
-</div>
-<div align="center">
-  <img src="images/metric_table.png" alt="Metric table" width="500">
-</div>
+![ROC_Curves](images/ROC_Curves.png) 
+![metric_table](images/metric_table.png)
 ### Важность признаков
 
 ![Feature Importance](images/feature_importance.png)
