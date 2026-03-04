@@ -12,8 +12,8 @@ def train_and_save_model():
     file_path = os.path.join(project_root, 'data', 'bank_full.csv')
 
     if not os.path.exists(file_path):
-        print(f"Ошибка: файл '{file_path}' не найден.")
-        print("Проверьте, что датасет находится в папке data и называется bank_full.csv")
+        print(f"Файл не найден: '{file_path}'")
+        print("Проверьте файл data/bank_full.csv")
         return
 
     try:
@@ -23,20 +23,20 @@ def train_and_save_model():
     except (pd.errors.ParserError, ValueError):
         try:
             data = pd.read_csv(file_path, sep=',')
-            print("Файл загружен с разделителем ','.")
+            print("CSV загружен с разделителем ','.")
         except Exception as e:
-            print(f"Ошибка при загрузке файла CSV с разделителем ',': {e}")
+            print(f"Не удалось загрузить CSV с ',': {e}")
             return
     except Exception as e:
-        print(f"Ошибка при загрузке файла CSV: {e}")
+        print(f"Ошибка загрузки CSV: {e}")
         return
 
     if 'y' not in data.columns:
-        print("Ошибка: Колонка 'y' не найдена в датасете. Пожалуйста, убедитесь, что целевая переменная названа 'y'.")
-        print(f"Доступные колонки: {data.columns.tolist()}")
+        print("Колонка 'y' не найдена в датасете")
+        print(f"Колонки: {data.columns.tolist()}")
         return
 
-    # Признаки для модели
+    # Берем 10 признаков
     selected_features = [
         'poutcome', 'contact', 'duration', 'housing', 'month',
         'previous', 'pdays', 'loan', 'age', 'day'
@@ -44,23 +44,22 @@ def train_and_save_model():
 
     missing_selected_features = [f for f in selected_features if f not in data.columns]
     if missing_selected_features:
-        print(f"Ошибка: Признаки отсутствуют в датасете: {missing_selected_features}")
-        print(f"Доступные колонки: {data.columns.tolist()}")
+        print(f"Нет нужных признаков: {missing_selected_features}")
+        print(f"Колонки: {data.columns.tolist()}")
         return
 
     X = data[selected_features].copy()
     y = data['y']
 
-    # Кодируем целевую переменную
+    # Кодируем y
     y_encoder = LabelEncoder()
     y = y_encoder.fit_transform(y)
-    print(f"Целевая переменная 'y' закодирована: {y_encoder.classes_.tolist()} -> {list(range(len(y_encoder.classes_)))}")
+    print(f"'y' закодирована: {y_encoder.classes_.tolist()} -> {list(range(len(y_encoder.classes_)))}")
 
     encoders = {}
     features_info = {}
     fallback_values = {}
 
-    # Определяем типы признаков
     for column in X.columns:
         if X[column].dtype == 'object' or pd.api.types.is_string_dtype(X[column]):
             le = LabelEncoder()
@@ -85,7 +84,7 @@ def train_and_save_model():
             features_info[column] = {'type': 'numerical', 'min': X[column].min(), 'max': X[column].max()}
             fallback_values[column] = X[column].median()
 
-    # Применяем энкодеры и заполняем пропуски
+    # Кодируем категории и заполняем пропуски
     for column in X.columns:
         if X[column].dtype == 'object' or pd.api.types.is_string_dtype(X[column]):
             X[column] = X[column].fillna(fallback_values[column])
@@ -95,19 +94,19 @@ def train_and_save_model():
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Обучаем XGBoost
+    # Обучаем модель
     model = xgb.XGBClassifier(objective='binary:logistic', eval_metric='logloss', random_state=42)
     model.fit(X_train, y_train)
 
     top_10_features_names = selected_features
-    print("\nМодель обучена только на следующих 10 признаках:")
+    print("\nМодель обучена на 10 признаках:")
     print(top_10_features_names)
     
 
     models_dir = 'models'
     if not os.path.exists(models_dir):
         os.makedirs(models_dir)
-        print(f"Создана директория: '{models_dir}'")
+        print(f"Создана папка: '{models_dir}'")
 
     # Сохраняем параметры XGBoost
     try:
@@ -123,7 +122,6 @@ def train_and_save_model():
         merged = {**booster_params, **filtered_params}
 
         for key, value in merged.items():
-            # Приводим numpy-типы к обычным Python-типам
             if isinstance(value, (np.integer, np.floating)):
                 params_string += f"{key}: {value.item()}\n"
             else:
@@ -132,12 +130,12 @@ def train_and_save_model():
         params_filename = os.path.join(models_dir, 'xgboost_params.txt')
         with open(params_filename, 'w') as f:
             f.write(params_string)
-        print(f"Параметры XGBoost успешно сохранены в '{params_filename}'")
+        print(f"Параметры XGBoost сохранены в '{params_filename}'")
     except Exception as e:
-        print(f"Ошибка при сохранении параметров XGBoost в TXT: {e}")
+        print(f"Не удалось сохранить параметры XGBoost: {e}")
     
 
-    # Собираем артефакты
+    # Сохраняем артефакты
     all_artifacts = {
         'model': model,
         'features_list': X.columns.tolist(),
@@ -150,7 +148,7 @@ def train_and_save_model():
 
     artifacts_filename = os.path.join(models_dir, 'all_bank_marketing_artifacts.joblib')
     joblib.dump(all_artifacts, artifacts_filename)
-    print(f"\nВсе артефакты успешно обучены и сохранены в '{artifacts_filename}'")
+    print(f"\nАртефакты сохранены в '{artifacts_filename}'")
 
 if __name__ == '__main__':
     train_and_save_model()

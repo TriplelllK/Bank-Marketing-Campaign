@@ -11,7 +11,7 @@ from endpoint import BankMarketingFeatures
 
 app = FastAPI(title="Bank Marketing Prediction API")
 
-# Глобальные переменные с артефактами
+# Артефакты модели
 model = None
 model_features = None
 label_encoders = None
@@ -21,7 +21,7 @@ fallback_values = None
 top_10_features_names = None
 
 
-# Загружаем артефакты при старте
+# Загружаем артефакты при запуске
 @app.on_event("startup")
 async def load_artifacts():
     global model, model_features, label_encoders, features_info, y_encoder, fallback_values, top_10_features_names
@@ -31,16 +31,16 @@ async def load_artifacts():
         params_txt_path = os.path.join(models_dir, 'xgboost_params.txt')
 
         if not os.path.exists(artifacts_path):
-            print(f"Ошибка: Файл артефактов '{artifacts_path}' не найден. Запустите model.py сначала.")
-            raise FileNotFoundError(f"Артефакты не найдены по пути: {artifacts_path}")
+            print(f"Файл артефактов не найден: '{artifacts_path}'")
+            raise FileNotFoundError(f"Артефакты не найдены: {artifacts_path}")
         
         if not os.path.exists(params_txt_path):
-            print(f"Ошибка: Файл параметров XGBoost '{params_txt_path}' не найден. Пожалуйста, запустите model.py сначала.")
-            raise FileNotFoundError(f"Параметры XGBoost не найдены по пути: {params_txt_path}")
+            print(f"Файл параметров XGBoost не найден: '{params_txt_path}'")
+            raise FileNotFoundError(f"Параметры XGBoost не найдены: {params_txt_path}")
 
 
         all_artifacts = joblib.load(artifacts_path)
-        print(f"Артефакты успешно загружены из '{artifacts_path}'")
+        print(f"Артефакты загружены: '{artifacts_path}'")
 
         model = all_artifacts['model']
         model_features = all_artifacts['features_list']
@@ -50,10 +50,10 @@ async def load_artifacts():
         fallback_values = all_artifacts['fallback_values']
         top_10_features_names = all_artifacts.get('top_10_features_names', [])
 
-        print("Модель, список признаков, кодировщики успешно загружены.")
+        print("Модель и вспомогательные данные загружены")
     except Exception as e:
-        print(f"Ошибка при загрузке артефактов: {e}")
-        raise HTTPException(status_code=500, detail=f"Ошибка при загрузке необходимых файлов: {e}")
+        print(f"Ошибка загрузки артефактов: {e}")
+        raise HTTPException(status_code=500, detail=f"Не удалось загрузить файлы модели: {e}")
 
 @app.get("/", summary="Корневой эндпоинт")
 async def read_root():
@@ -62,54 +62,53 @@ async def read_root():
 @app.get("/features_info", summary="Получить информацию о признаках для построения UI")
 async def get_features_info():
     if features_info is None:
-        raise HTTPException(status_code=500, detail="Информация о признаках не загружена.")
+        raise HTTPException(status_code=500, detail="Информация о признаках пока не загружена")
     return features_info
 
 @app.get("/xgboost_params", summary="Получить параметры загруженной модели XGBoost (txt формат)", response_class=PlainTextResponse)
 async def get_xgboost_params():
-    """Возвращает параметры XGBoost из txt-файла."""
+    # Возвращаем параметры из txt
     params_txt_path = os.path.join('models', 'xgboost_params.txt')
     if not os.path.exists(params_txt_path):
-        raise HTTPException(status_code=500, detail=f"Файл параметров XGBoost '{params_txt_path}' не найден.")
+        raise HTTPException(status_code=500, detail=f"Файл параметров не найден: {params_txt_path}")
     
     try:
         with open(params_txt_path, 'r') as f:
             params_content = f.read()
         return params_content
     except Exception as e:
-        print(f"Ошибка при чтении файла параметров XGBoost: {e}")
-        raise HTTPException(status_code=500, detail=f"Ошибка при чтении файла параметров XGBoost: {e}.")
+        print(f"Ошибка чтения файла параметров: {e}")
+        raise HTTPException(status_code=500, detail=f"Не удалось прочитать файл параметров: {e}")
 
 
 @app.post("/predict", summary="Предсказать результат банковского маркетинга")
 async def predict(features: BankMarketingFeatures):
-    """Делает предсказание по входным признакам."""
+    # Делаем предсказание по входным данным
     if model is None or model_features is None or label_encoders is None or features_info is None:
-        raise HTTPException(status_code=500, detail="Модель или артефакты не загружены.")
+        raise HTTPException(status_code=500, detail="Модель еще не загружена")
 
     input_dict = features.dict()
     
-    # Делаем DataFrame из входных данных
     input_df = pd.DataFrame([input_dict])
 
-    # Кодируем категориальные признаки
+    # Кодируем категориальные поля
     for column, encoder in label_encoders.items():
         if column in input_df.columns:
             try:
                 if input_df[column].iloc[0] not in encoder.classes_:
-                    raise HTTPException(status_code=400, detail=f"Неизвестное значение '{input_df[column].iloc[0]}' для категориального признака '{column}'. Ожидаемые значения: {encoder.classes_.tolist()}")
+                    raise HTTPException(status_code=400, detail=f"Неизвестное значение '{input_df[column].iloc[0]}' для поля '{column}'. Возможные значения: {encoder.classes_.tolist()}")
                 
                 input_df[column] = encoder.transform(input_df[column])
             except ValueError as e:
-                raise HTTPException(status_code=400, detail=f"Ошибка кодирования признака '{column}': {e}.")
+                raise HTTPException(status_code=400, detail=f"Ошибка кодирования поля '{column}': {e}")
         else:
-            raise HTTPException(status_code=400, detail=f"Отсутствует необходимый признак в запросе: {column}.")
+            raise HTTPException(status_code=400, detail=f"В запросе нет обязательного поля: {column}")
 
-    # Приводим порядок колонок к обученной модели
+    # Выставляем порядок колонок как в обучении
     try:
         input_df = input_df[model_features]
     except KeyError as e:
-        raise HTTPException(status_code=400, detail=f"Отсутствует необходимый признак в запросе: {e}.")
+        raise HTTPException(status_code=400, detail=f"Не хватает поля в запросе: {e}")
 
     prediction_raw = model.predict(input_df)[0]
     probability = model.predict_proba(input_df)[0].tolist()
