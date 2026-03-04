@@ -7,7 +7,7 @@ import os
 import numpy as np
 
 def train_and_save_model():
-    # Используем относительный путь к датасету в корне проекта
+    # Путь к датасету
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     file_path = os.path.join(project_root, 'data', 'bank_full.csv')
 
@@ -36,23 +36,22 @@ def train_and_save_model():
         print(f"Доступные колонки: {data.columns.tolist()}")
         return
 
-    # Выбираем 10 заданных признаков
+    # Признаки для модели
     selected_features = [
         'poutcome', 'contact', 'duration', 'housing', 'month',
         'previous', 'pdays', 'loan', 'age', 'day'
     ]
 
-    # Проверка на наличие выбранных признаков в датасете
     missing_selected_features = [f for f in selected_features if f not in data.columns]
     if missing_selected_features:
         print(f"Ошибка: Признаки отсутствуют в датасете: {missing_selected_features}")
         print(f"Доступные колонки: {data.columns.tolist()}")
         return
 
-    X = data[selected_features].copy() # Обучение только с этими признаками
+    X = data[selected_features].copy()
     y = data['y']
 
-    # Кодируем целевую переменную 'y'
+    # Кодируем целевую переменную
     y_encoder = LabelEncoder()
     y = y_encoder.fit_transform(y)
     print(f"Целевая переменная 'y' закодирована: {y_encoder.classes_.tolist()} -> {list(range(len(y_encoder.classes_)))}")
@@ -61,7 +60,7 @@ def train_and_save_model():
     features_info = {}
     fallback_values = {}
 
-    # определяем типы признаков, учитывая новый строковый dtype pandas
+    # Определяем типы признаков
     for column in X.columns:
         if X[column].dtype == 'object' or pd.api.types.is_string_dtype(X[column]):
             le = LabelEncoder()
@@ -79,7 +78,6 @@ def train_and_save_model():
             fallback_values[column] = mode_value
 
         else:
-            # попытаемся привести колонку к числовому типу, если это возможно
             try:
                 X[column] = pd.to_numeric(X[column], errors='coerce')
             except Exception:
@@ -87,7 +85,7 @@ def train_and_save_model():
             features_info[column] = {'type': 'numerical', 'min': X[column].min(), 'max': X[column].max()}
             fallback_values[column] = X[column].median()
 
-    # применяем ранее подготовленные энкодеры и заполняем пропуски
+    # Применяем энкодеры и заполняем пропуски
     for column in X.columns:
         if X[column].dtype == 'object' or pd.api.types.is_string_dtype(X[column]):
             X[column] = X[column].fillna(fallback_values[column])
@@ -97,13 +95,10 @@ def train_and_save_model():
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Обучение модели XGBoost. Данная модель выбрана так как она хорошо подходит для задач классификации и регрессии. 
-    # По опыту предыдущего домашнего задания, она показала хорошие результаты на этом датасете.
+    # Обучаем XGBoost
     model = xgb.XGBClassifier(objective='binary:logistic', eval_metric='logloss', random_state=42)
     model.fit(X_train, y_train)
 
-    # Определение и вывод топ-10 важных признаков. Будет отображено 10 признаков, которыми модель обучилась.
-    # Признаки были отобраны исходя из опыта предыдущего домашнего задания.
     top_10_features_names = selected_features
     print("\nМодель обучена только на следующих 10 признаках:")
     print(top_10_features_names)
@@ -114,24 +109,21 @@ def train_and_save_model():
         os.makedirs(models_dir)
         print(f"Создана директория: '{models_dir}'")
 
-    # Сохранение параметров XGBoost в TXT-файл
+    # Сохраняем параметры XGBoost
     try:
         xgboost_params = model.get_params()
-        # очищаем параметры, убирая неустановленные (None)
         params_string = ""
         filtered_params = {k: v for k, v in xgboost_params.items() if v is not None}
 
-        # также добавим базовые параметры, используемые самим XGBoost
         try:
             booster_params = model.get_xgb_params()
         except Exception:
             booster_params = {}
 
-        # обединяем словари, booster_params могут переопределить filtered_params
         merged = {**booster_params, **filtered_params}
 
         for key, value in merged.items():
-            # Преобразуем типы numpy в стандартные типы Python
+            # Приводим numpy-типы к обычным Python-типам
             if isinstance(value, (np.integer, np.floating)):
                 params_string += f"{key}: {value.item()}\n"
             else:
@@ -145,10 +137,10 @@ def train_and_save_model():
         print(f"Ошибка при сохранении параметров XGBoost в TXT: {e}")
     
 
-    # Создаем словарь, содержащий все артефакты
+    # Собираем артефакты
     all_artifacts = {
         'model': model,
-        'features_list': X.columns.tolist(), # Список всех признаков, на которых обучалась модель
+        'features_list': X.columns.tolist(),
         'label_encoders': encoders,
         'features_info': features_info,
         'y_encoder': y_encoder,
@@ -156,7 +148,6 @@ def train_and_save_model():
         'top_10_features_names': top_10_features_names
     }
 
-    # Сохраняем весь словарь в один файл .joblib
     artifacts_filename = os.path.join(models_dir, 'all_bank_marketing_artifacts.joblib')
     joblib.dump(all_artifacts, artifacts_filename)
     print(f"\nВсе артефакты успешно обучены и сохранены в '{artifacts_filename}'")

@@ -11,7 +11,7 @@ from endpoint import BankMarketingFeatures
 
 app = FastAPI(title="Bank Marketing Prediction API")
 
-# Переменные для хранения модели и артефактов
+# Глобальные переменные с артефактами
 model = None
 model_features = None
 label_encoders = None
@@ -21,7 +21,7 @@ fallback_values = None
 top_10_features_names = None
 
 
-# Загрузка обученной модели и артефактов при старте приложения
+# Загружаем артефакты при старте
 @app.on_event("startup")
 async def load_artifacts():
     global model, model_features, label_encoders, features_info, y_encoder, fallback_values, top_10_features_names
@@ -34,7 +34,6 @@ async def load_artifacts():
             print(f"Ошибка: Файл артефактов '{artifacts_path}' не найден. Запустите model.py сначала.")
             raise FileNotFoundError(f"Артефакты не найдены по пути: {artifacts_path}")
         
-        # Проверка и загрузка TXT-файла с параметрами
         if not os.path.exists(params_txt_path):
             print(f"Ошибка: Файл параметров XGBoost '{params_txt_path}' не найден. Пожалуйста, запустите model.py сначала.")
             raise FileNotFoundError(f"Параметры XGBoost не найдены по пути: {params_txt_path}")
@@ -66,12 +65,9 @@ async def get_features_info():
         raise HTTPException(status_code=500, detail="Информация о признаках не загружена.")
     return features_info
 
-# Просмотр параметров XGBoost
 @app.get("/xgboost_params", summary="Получить параметры загруженной модели XGBoost (txt формат)", response_class=PlainTextResponse)
 async def get_xgboost_params():
-    """
-    Параметры, с которыми была обучена загруженная модель XGBoost (из txt-файла).
-    """
+    """Возвращает параметры XGBoost из txt-файла."""
     params_txt_path = os.path.join('models', 'xgboost_params.txt')
     if not os.path.exists(params_txt_path):
         raise HTTPException(status_code=500, detail=f"Файл параметров XGBoost '{params_txt_path}' не найден.")
@@ -87,38 +83,19 @@ async def get_xgboost_params():
 
 @app.post("/predict", summary="Предсказать результат банковского маркетинга")
 async def predict(features: BankMarketingFeatures):
-    """
-    Предсказывает, подпишется ли клиент на срочный депозит на основе предоставленных признаков.
-    
-    Пример запроса (JSON):
-    ```json
-    {
-      "poutcome": "success",
-      "contact": "cellular",
-      "duration": 300,
-      "housing": "yes",
-      "month": "mar",
-      "previous": 1,
-      "pdays": 999,
-      "loan": "no",
-      "age": 38,
-      "day": 15
-    }
-    ```
-    """
+    """Делает предсказание по входным признакам."""
     if model is None or model_features is None or label_encoders is None or features_info is None:
         raise HTTPException(status_code=500, detail="Модель или артефакты не загружены.")
 
     input_dict = features.dict()
     
-    # Создаем DataFrame из входных данных.
+    # Делаем DataFrame из входных данных
     input_df = pd.DataFrame([input_dict])
 
-    # Применяем LabelEncoder к категориальным признакам входящих данных
+    # Кодируем категориальные признаки
     for column, encoder in label_encoders.items():
-        if column in input_df.columns: # Проверяем, что колонка существует во входном DataFrame
+        if column in input_df.columns:
             try:
-                # Проверяем, что значение в колонке присутствует в классах кодировщика
                 if input_df[column].iloc[0] not in encoder.classes_:
                     raise HTTPException(status_code=400, detail=f"Неизвестное значение '{input_df[column].iloc[0]}' для категориального признака '{column}'. Ожидаемые значения: {encoder.classes_.tolist()}")
                 
@@ -126,10 +103,9 @@ async def predict(features: BankMarketingFeatures):
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=f"Ошибка кодирования признака '{column}': {e}.")
         else:
-            # Если колонка отсутствует, выбрасываем ошибку
             raise HTTPException(status_code=400, detail=f"Отсутствует необходимый признак в запросе: {column}.")
 
-    # Убеждаемся, что порядок колонок в DataFrame соответствует порядку, на котором обучалась модель
+    # Приводим порядок колонок к обученной модели
     try:
         input_df = input_df[model_features]
     except KeyError as e:

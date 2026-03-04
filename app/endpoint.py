@@ -1,7 +1,6 @@
 from pydantic import BaseModel
 
 class BankMarketingFeatures(BaseModel):
-    # 10 признаков для предсказания
     poutcome: str
     contact: str
     duration: int
