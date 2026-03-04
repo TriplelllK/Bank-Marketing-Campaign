@@ -1,15 +1,17 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
+from contextlib import asynccontextmanager
 import joblib
 import pandas as pd
 import os
 import uvicorn
 import numpy as np
 import xgboost as xgb
-from endpoint import BankMarketingFeatures
-
-app = FastAPI(title="Bank Marketing Prediction API")
+try:
+    from .endpoint import BankMarketingFeatures
+except ImportError:
+    from endpoint import BankMarketingFeatures
 
 # Артефакты модели
 model = None
@@ -21,8 +23,6 @@ fallback_values = None
 top_10_features_names = None
 
 
-# Загружаем артефакты при запуске
-@app.on_event("startup")
 async def load_artifacts():
     global model, model_features, label_encoders, features_info, y_encoder, fallback_values, top_10_features_names
     try:
@@ -54,6 +54,15 @@ async def load_artifacts():
     except Exception as e:
         print(f"Ошибка загрузки артефактов: {e}")
         raise HTTPException(status_code=500, detail=f"Не удалось загрузить файлы модели: {e}")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await load_artifacts()
+    yield
+
+
+app = FastAPI(title="Bank Marketing Prediction API", lifespan=lifespan)
 
 @app.get("/", summary="Корневой эндпоинт")
 async def read_root():
@@ -87,7 +96,10 @@ async def predict(features: BankMarketingFeatures):
     if model is None or model_features is None or label_encoders is None or features_info is None:
         raise HTTPException(status_code=500, detail="Модель еще не загружена")
 
-    input_dict = features.dict()
+    if hasattr(features, 'model_dump'):
+        input_dict = features.model_dump()
+    else:
+        input_dict = features.dict()
     
     input_df = pd.DataFrame([input_dict])
 
